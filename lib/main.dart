@@ -10,13 +10,11 @@ void main() {
 
 // Handles saving and reading notes
 class NoteStorage {
-  // Get the application documents folder
   Future<String> get _localPath async {
     final directory = await getApplicationDocumentsDirectory();
     return directory.path;
   }
 
-  // Get the notes file
   Future<File> get _localFile async {
     final path = await _localPath;
     return File('$path/notes.txt');
@@ -28,7 +26,18 @@ class NoteStorage {
     return file.writeAsString(text);
   }
 
-  // Read note from file
+  // Read note safely
+  Future<String> readNote() async {
+    try {
+      final file = await _localFile;
+      return await file.readAsString();
+    } catch (e) {
+      debugPrint('Error reading note: $e');
+      return '';
+    }
+  }
+
+  // Read raw content for console
   Future<String> readRawContent() async {
     final file = await _localFile;
     return file.readAsString();
@@ -46,18 +55,21 @@ class _MyAppState extends State<MyApp> {
   bool _isDarkMode = false;
 
   final NoteStorage _noteStorage = NoteStorage();
+
   final TextEditingController _noteController =
       TextEditingController();
 
   String _statusMessage = '';
+  String _savedNote = '';
 
   @override
   void initState() {
     super.initState();
     _loadThemePreference();
+    _loadSavedNote();
   }
 
-  // Load saved theme preference
+  // Load theme preference
   Future<void> _loadThemePreference() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -68,7 +80,7 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  // Update and save theme preference
+  // Update theme preference
   Future<void> _updateTheme(bool newValue) async {
     setState(() {
       _isDarkMode = newValue;
@@ -78,13 +90,28 @@ class _MyAppState extends State<MyApp> {
     await prefs.setBool('isDarkMode', newValue);
   }
 
-  // Save note
+  // Load saved note when app starts
+  Future<void> _loadSavedNote() async {
+    final note = await _noteStorage.readNote();
+
+    if (!mounted) return;
+
+    setState(() {
+      _savedNote = note;
+      _noteController.text = note;
+    });
+  }
+
+  // Save note and update display
   Future<void> _saveNote() async {
     try {
-      await _noteStorage.writeNote(_noteController.text);
+      final note = _noteController.text;
+
+      await _noteStorage.writeNote(note);
 
       setState(() {
-        _statusMessage = 'Note saved to disk!';
+        _savedNote = note;
+        _statusMessage = 'Note saved successfully!';
       });
     } catch (e) {
       setState(() {
@@ -93,7 +120,7 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  // Print saved note to debug console
+  // Print note to console
   Future<void> _printNote() async {
     try {
       final content = await _noteStorage.readRawContent();
@@ -129,9 +156,10 @@ class _MyAppState extends State<MyApp> {
         appBar: AppBar(
           title: const Text('Persistent Notes App'),
         ),
-        body: Padding(
+        body: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SwitchListTile(
                 title: const Text('Dark Mode'),
@@ -162,9 +190,32 @@ class _MyAppState extends State<MyApp> {
                 child: const Text('Print File to Console'),
               ),
 
-              const SizedBox(height: 15),
+              const SizedBox(height: 20),
 
-              Text(_statusMessage),
+              Text(
+                'Saved Note:',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+
+              const SizedBox(height: 10),
+
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    _savedNote.isEmpty
+                        ? 'No notes saved yet.'
+                        : _savedNote,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              Text(
+                _statusMessage,
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),
