@@ -11,3 +11,11 @@ Phase 2: Note File Storage & Console Inspection
 Testing file writes with a console print button helps me make sure the notes are actually being saved correctly before adding more features to the app.
 
 The NoteStorage helper class keeps the file operations separate from the user interface. This makes the code easier to organize, understand, and maintain. It also allows me to reuse the methods whenever I need to save or read notes.
+
+--------------
+
+Phase 3: Restoring & Displaying Notes in the UI
+
+When an application tries to read a file that does not exist, it can cause an exception. I used a try/catch block to handle this situation so the app does not crash.
+
+If the file does not exist yet, my program returns an empty string instead. I also added a feature that automatically loads saved notes when the app starts. The saved note now appears in a display card and updates whenever I save a new note.
